@@ -119,4 +119,23 @@ def get_spark_session(app_name="reconciler-orchestrator") -> SparkSession:
         logger.info(f"Spark Log Level configurado para: {log_level}")
         logger.info(f"SparkSession inicializada e configurada com sucesso para MinIO/S3A.")
 
+        # --- Ajustar log do Hadoop/S3A ---
+        from py4j.java_gateway import java_import
+
+        java_import(_spark_session._jvm, "org.apache.log4j.Logger")
+        java_import(_spark_session._jvm, "org.apache.log4j.Level")
+
+        # Converte o log do Python para nível Java
+        java_level = _spark_session._jvm.Level.WARN  # ou INFO, se quiser um pouco mais
+
+        # Reduz logs do S3A / Hadoop / Spark
+        _logger_s3a = _spark_session._jvm.Logger.getLogger("org.apache.hadoop.fs.s3a")
+        _logger_s3a.setLevel(java_level)
+
+        _logger_fs = _spark_session._jvm.Logger.getLogger("org.apache.hadoop.fs.FileSystem")
+        _logger_fs.setLevel(java_level)
+
+        _logger_spark = _spark_session._jvm.Logger.getLogger("org.apache.spark")
+        _logger_spark.setLevel(java_level)
+
     return _spark_session
