@@ -1,0 +1,28 @@
+{
+  "lancamentos_cj": {
+    "columns": [
+      "empresa",
+      "valor_net",
+      "data_contabil",
+      "conta_contabil",
+      "transactionID"
+    ],
+    "order_by": ["empresa", "conta_contabil", "data_contabil"]
+  },
+  "clientes": {
+    "columns": [
+      "cliente_id",
+      "nome",
+      "idade",
+      "sexo"
+    ]
+  },
+  "pagamentos": {
+    "columns": [
+      "pagamento_id",
+      "id_lancamento",
+      "valor_pago",
+      "data_pagamento"
+    ]
+  }
+}

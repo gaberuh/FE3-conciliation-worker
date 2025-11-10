@@ -1,0 +1,23 @@
+{
+  "reconciliation_synthetic_result": {
+    "columns": [
+      "empresa",
+      "conta_contabil",
+      "data_contabil",
+      "transactionID",
+      "valor_net",
+      "reconciliation_status",
+      "conciliation_id"
+    ],
+    "types": {
+      "empresa": "string",
+      "conta_contabil": "string",
+      "data_contabil": "string",
+      "transactionID": "string",
+      "valor_net": "decimal",
+      "reconciliation_status": "string",
+      "conciliation_id": "string"
+    },
+    "order_by": ["empresa", "conta_contabil", "data_contabil"]
+  }
+}
