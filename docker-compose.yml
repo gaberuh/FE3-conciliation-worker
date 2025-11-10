@@ -4,7 +4,7 @@ services:
   git_clone:
     image: alpine:3.16
     volumes:
-      - rovia_data_ingestion_data:/app
+      - FE3_conciliation_worker_data:/app
     working_dir: /app
     environment:
       - GIT_USERNAME=${GIT_USERNAME}
@@ -29,19 +29,18 @@ services:
   requirements:
     image: python:3.12-slim
     volumes:
-      - rovia_data_ingestion_data:/app_data
+      - FE3_conciliation_worker_data:/app_data
     working_dir: /app_data
     command: >
       /bin/sh -c "
       echo 'Esperando o git_clone finalizar...' && \
       until [ -d /app_data/.git ]; do echo 'Aguardando repositório ser clonado...'; sleep 5; done && \
-      apt-get update && apt-get install -y tzdata ffmpeg bash && \
+      apt-get update && apt-get install -y tzdata bash openjdk-17-jre-headless && \
       cd /app_data && \
       pip install --upgrade pip && \
       pip install --no-cache-dir -r requirements.txt --target=/app_data/libs && \
       export PYTHONPATH=$PYTHONPATH:/app_data/libs && \
-      python3.12 -m pip show fastapi && \
-      echo 'Instalação completa.' && \
+      echo 'Instalação completa, JVM pronta.' && \
       exit 0
       "
     depends_on:
@@ -52,32 +51,39 @@ services:
       restart_policy:
         condition: none
 
-  api:
+  spark_worker:
     image: python:3.12-slim
     volumes:
-      - rovia_data_ingestion_data:/app_data
+      - FE3_conciliation_worker_data:/app_data
     working_dir: /app_data
     environment:
       - PYTHONPATH=/app_data:/app_data/libs
-      - MONGODB_URI=${MONGODB_URI}
-      - DB_NAME=${DB_NAME}
-      - CORS_ORIGINS=${CORS_ORIGINS}
+      # --- CONFIGURAÇÕES DE AMBIENTE DO WORKER (MinIO e RabbitMQ) ---
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME}
+      - MINIO_SECURE=${MINIO_SECURE}
+      - SPARK_MASTER=${SPARK_MASTER}
+      - RABBITMQ_HOST=${RABBITMQ_HOST}
+      - RABBITMQ_PORT=${RABBITMQ_PORT}
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
+      - RABBITMQ_VHOST=${RABBITMQ_VHOST}
+      - RABBITMQ_QUEUE_NAME=${RABBITMQ_QUEUE_NAME}
     command: >
       /bin/sh -c "
-      echo 'Esperando o requirements finalizar...' && \
+      echo 'Esperando o worker_requirements finalizar...' && \
       until [ -d /app_data/libs ]; do echo 'Aguardando dependências...'; sleep 5; done && \
-      echo 'Esperando o git_clone finalizar...' && \
-      until [ -d /app_data/.git ]; do echo 'Aguardando repositório ser clonado...'; sleep 5; done && \
-      echo 'Iniciando aplicação após pequeno delay...' && sleep 10 && \
-      python -m uvicorn app.main:app --host 0.0.0.0 --port 8015
+      java -version && \
+      echo 'Iniciando Spark Worker...' && \
+      python -m app.main
       "
     depends_on:
       - requirements
       - git_clone
     networks:
       - winlead
-    ports:
-      - "8015:8015"
     deploy:
       mode: replicated
       replicas: 1
@@ -86,21 +92,9 @@ services:
           - node.role == manager
       restart_policy:
         condition: on-failure
-      labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.data-ingestion-api.rule=Host(`api.rovia.com.br`) && PathPrefix(`/data-ingestion`)"
-        - "traefik.http.routers.data-ingestion-api.entrypoints=websecure"
-        - "traefik.http.routers.data-ingestion-api.tls.certresolver=letsencryptresolver"
-        - "traefik.http.routers.data-ingestion-api.service=data-ingestion-api"
-        - "traefik.http.services.data-ingestion-api.loadBalancer.server.port=8015"
-        - "traefik.http.middlewares.strip-data-ingestion-prefix.stripPrefix.prefixes=/data-ingestion"
-        - "traefik.http.middlewares.data-ingestion-ratelimit.ratelimit.average=20"
-        - "traefik.http.middlewares.data-ingestion-ratelimit.ratelimit.burst=30"
-        - "traefik.http.middlewares.data-ingestion-ratelimit.ratelimit.sourceCriterion.ipStrategy.depth=1"
-        - "traefik.http.routers.data-ingestion-api.middlewares=strip-data-ingestion-prefix,data-ingestion-ratelimit"
 
 volumes:
-  rovia_data_ingestion_data:
+  FE3_conciliation_worker_data:
     external: true
 
 networks:
