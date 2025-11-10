@@ -101,7 +101,7 @@ class OutputWriterService:
                     f"  -> Partições atuais ({current_partitions}) já correspondem ao alvo ({target_partitions}). Escrita direta.")
 
             # 3. ESCRITA
-            writer = df_to_write.write.mode("overwrite")
+            writer = df_to_write.write.mode("overwrite").partitionBy("empresa", "conta_contabil")
 
             if partition_by:
                 # Note que este 'partitionBy' é para a estrutura de pastas S3
