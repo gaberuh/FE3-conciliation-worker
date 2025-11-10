@@ -125,17 +125,25 @@ def get_spark_session(app_name="reconciler-orchestrator") -> SparkSession:
         java_import(_spark_session._jvm, "org.apache.log4j.Logger")
         java_import(_spark_session._jvm, "org.apache.log4j.Level")
 
-        # Converte o log do Python para nível Java
-        java_level = _spark_session._jvm.Level.WARN  # ou INFO, se quiser um pouco mais
+        level_warn = _spark_session._jvm.Level.WARN
 
-        # Reduz logs do S3A / Hadoop / Spark
-        _logger_s3a = _spark_session._jvm.Logger.getLogger("org.apache.hadoop.fs.s3a")
-        _logger_s3a.setLevel(java_level)
+        # Spark SQL FileScan
+        Logger_sql = _spark_session._jvm.Logger.getLogger("org.apache.spark.sql.execution.FileScanRDD")
+        Logger_sql.setLevel(level_warn)
 
-        _logger_fs = _spark_session._jvm.Logger.getLogger("org.apache.hadoop.fs.FileSystem")
-        _logger_fs.setLevel(java_level)
+        # S3A I/O
+        Logger_s3a_input = _spark_session._jvm.Logger.getLogger("org.apache.hadoop.fs.s3a.S3AInputStream")
+        Logger_s3a_input.setLevel(level_warn)
 
-        _logger_spark = _spark_session._jvm.Logger.getLogger("org.apache.spark")
-        _logger_spark.setLevel(java_level)
+        loggers_to_silence = [
+            "org.apache.spark.sql.execution.FileScanRDD",
+            "org.apache.hadoop.fs.s3a.S3AInputStream",
+            "org.apache.hadoop.fs.s3a.S3AFileSystem",
+            "org.apache.hadoop.fs.FileSystem"
+        ]
+
+        for name in loggers_to_silence:
+            Logger = _spark_session._jvm.Logger.getLogger(name)
+            Logger.setLevel(level_warn)
 
     return _spark_session
