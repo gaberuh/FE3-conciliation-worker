@@ -75,6 +75,7 @@ services:
       /bin/sh -c "
       echo 'Esperando o worker_requirements finalizar...' && \
       until [ -d /app_data/libs ]; do echo 'Aguardando dependências...'; sleep 5; done && \
+      apt-get update && apt-get install -y openjdk-17-jre-headless && \
       java -version && \
       echo 'Iniciando Spark Worker...' && \
       python -m app.main
