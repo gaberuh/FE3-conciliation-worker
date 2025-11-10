@@ -111,34 +111,12 @@ def get_spark_session(app_name="reconciler-orchestrator") -> SparkSession:
         # Reforçando o fadvise
         hadoop_conf.set("fs.s3a.experimental.input.fadvise", "normal")
 
-        # --- 4. Configura Spark log level ---
+        # --- 4. Configurações e Log ---
         _spark_session.conf.set("spark.sql.execution.arrow.pyspark.enabled", "false")
+
         log_level = "WARN" if settings.ENVIRONMENT == "production" else settings.LOG_LEVEL.upper()
         _spark_session.sparkContext.setLogLevel(log_level)
         logger.info(f"Spark Log Level configurado para: {log_level}")
-
-        # --- 5. Silenciar loggers específicos do Spark/Hadoop ---
-        from py4j.java_gateway import java_import
-        java_import(_spark_session._jvm, "org.apache.log4j.Logger")
-        java_import(_spark_session._jvm, "org.apache.log4j.Level")
-        level_warn = _spark_session._jvm.Level.WARN
-
-        loggers_to_silence = [
-            "org.apache.spark",
-            "org.apache.spark.sql",
-            "org.apache.spark.sql.execution.FileScanRDD",
-            "org.apache.spark.sql.execution.datasources.FileSourceScanExec",
-            "org.apache.spark.sql.catalyst",
-            "org.apache.spark.sql.execution.CodeGenerator",
-            "org.apache.hadoop",
-            "org.apache.hadoop.fs.s3a.S3AInputStream",
-            "org.apache.hadoop.fs.s3a.S3AFileSystem",
-            "org.apache.hadoop.fs.FileSystem",
-        ]
-        for name in loggers_to_silence:
-            Logger = _spark_session._jvm.Logger.getLogger(name)
-            Logger.setLevel(level_warn)
-
-        logger.info("SparkSession inicializada e logs silenciados com sucesso.")
+        logger.info(f"SparkSession inicializada e configurada com sucesso para MinIO/S3A.")
 
     return _spark_session
